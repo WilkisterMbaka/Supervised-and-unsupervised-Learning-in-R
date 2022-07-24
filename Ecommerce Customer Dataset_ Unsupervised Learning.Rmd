@@ -1,0 +1,428 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Define the problem
+1. Perform clustering stating insights drawn from your analysis and visualizations.
+2. Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis. 
+#Metric of success
+- Importing the data
+- Cleaning the data 
+- performing a thorough EDA
+- Build K Means and Hierarchical model structures.
+
+
+#Data relevance
+The dataset for this Independent project can be found here [http://bit.ly/EcommerceCustomersDataset].  
+
+- The dataset consists of 10 numerical and 8 categorical attributes. The 'Revenue' attribute can be used as the class label.
+"Administrative", "Administrative Duration", "Informational", "Informational Duration", "Product Related" and "Product Related Duration" represents the number of different types of pages visited by the visitor in that session and total time spent in each of these page categories. The values of these features are derived from the URL information of the pages visited by the user and updated in real-time when a user takes an action, e.g. moving from one page to another. 
+-The "Bounce Rate", "Exit Rate" and "Page Value" features represent the metrics measured by "Google Analytics" for each page in the e-commerce site. 
+-The value of the "Bounce Rate" feature for a web page refers to the percentage of visitors who enter the site from that page and then leave ("bounce") without triggering any other requests to the analytics server during that session. 
+-The value of the "Exit Rate" feature for a specific web page is calculated as for all pageviews to the page, the percentage that was the last in the session.
+-The "Page Value" feature represents the average value for a web page that a user visited before completing an e-commerce transaction. 
+-The "Special Day" feature indicates the closeness of the site visiting time to a specific special day (e.g. Mother’s Day, Valentine's Day) in which the sessions are more likely to be finalized with the transaction. The value of this attribute is determined by considering the dynamics of e-commerce such as the duration between the order date and delivery date. For example, for Valentina’s day, this value takes a nonzero value between February 2 and February 12, zero before and after this date unless it is close to another special day, and its maximum value of 1 on February 8. 
+-The dataset also includes the operating system, browser, region, traffic type, visitor type as returning or new visitor, a Boolean value indicating whether the date of the visit is weekend, and month of the year.
+
+
+#Understanding the context
+
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups
+
+#Experimental design
+
+The experimental design will involve the following steps:
+Creating a Markdown which will comprise the following sections. 
+
+- Problem Definition
+- Data Sourcing
+- Check the Data
+- Perform Data Cleaning
+- Perform Exploratory Data Analysis  (Univariate, Bivariate & Multivariate)
+- Implement the Solution
+- Challenge the Solution
+- Follow up Questions
+ 
+ 
+#Loading Data
+```{r}
+#Install packages needed 
+#install.packages("naniar")
+#pkgs <- c("factoextra",  "NbClust")
+#install.packages(pkgs)
+#install.packages("superml")
+```
+```{r}
+library (tidyr)
+library(naniar)
+library (ggplot2)
+library (e1071)
+library (corrplot)
+library(factoextra)
+library(NbClust)
+library(superml)
+```
+
+``` {r}
+#installing packages
+library(data.table)
+#
+#Loading the dataset
+df <- fread("http://bit.ly/EcommerceCustomersDataset")
+```
+
+```{r}
+# Preview the data
+head(df)
+```
+```{r}
+# Dimensionanity of the data
+dim(df)
+```
+The dataframe has 12330 rows and 18 columns
+
+
+#Data cleaning
+```{r}
+# first er will start by checking the column names. 
+colnames(df)
+# The column names have a mixture of uppercase and lowercase charachers we should correct that an d make all the characters lowercase.
+names(df) <- tolower(names(df))
+# Confirmation 
+colnames(df)
+```
+
+```{r}
+# Let us find the datatypes of the data
+str(df)
+```
+There are a number of datatypes. Most of the data is in numerical format 
+The Month and Visitor type columns are in character 
+The weekend and revenue columns are have logical values
+
+``` {r}
+#Finding the total number of missing values in each column
+colSums(is.na(df))
+#There are no missing values in the dataset
+```
+There are several columns with missing values. They will affect the data analysis and will have to be dropped.
+
+```{r}
+# Dropping null values. 
+df <- na.omit(df) # Method 1 - Remove NA
+# Confirming that the nulls have been removed
+colSums(is.na(df))
+```
+Now there are no more nulls in the dataframe.  
+
+```{r}
+# Cheking for duplicates
+df_dup <- df[duplicated(df),]
+df_dup
+```
+ There are a number of duplicated records. The duplicated records sum up to 117 records.
+ 
+```{r}
+# Shape before
+dim(df)
+# Removing duplicates
+df <- unique(df)
+# Shape after(confirmation)
+dim (df)
+```
+ We have removed the duplicates successfully 
+
+##Checking for outliers
+
+```{r}
+# Plotting boxplots to check for outliers
+boxplot(df$administrative,col='grey', main = 'Administrative')
+boxplot(df$administrative_duration,col='grey', main = 'Administrative duration Boxplot')
+boxplot(df$informational,col='grey', main = 'Informational')
+boxplot(df$informational_duration,col='grey', main = 'Informational duration')
+boxplot(df$productrelated,col='grey', main = 'Product related')
+boxplot(df$productrelated_duration,col='grey', main = 'Product related durations')
+boxplot(df$bouncerates,col='grey', main = 'Bounce rates')
+boxplot(df$exitrates,col='grey', main = 'exit rates')
+boxplot(df$pagevalues,col='grey', main = 'Page Values')
+boxplot(df$specialday,col='grey', main = 'Special Day')
+boxplot(df$weekend, col='grey', main = 'Weekend')
+boxplot(df$revenue,col='grey', main = 'Revenue')
+```
+From the boxplots we can see that all the columns have too many outliers to remove. 
+
+#Unikurtosisiate analysis
+Measures of dispersion 
+We will run the summary function that returns the Min, max, amean and the quantile data 
+```{r}
+summary (df)
+```
+we will now check for the variances and standard deviation for the columns
+Most of the columns are categorical and hence make it the value of the Variance will not be useful. 
+
+```{r}
+paste("The variance for Administrative Duration is" , (var(df$administrative_duration)), sep = " ")
+paste("The variance for Informational Duration is" , (var(df$informational_duration)), sep = " ")
+paste("The variance for Product Related  is" , (var(df$productrelated)), sep = " ")
+paste("The variance for Product Related Duration is" , (var(df$productrelated_duration  )), sep = " ")
+paste("The variance for Bounce Rates  is" , (var(df$bouncerates)), sep = " ")
+paste("The variance for Exit rates is" , (var(df$exitrates)), sep = " ")
+paste("The variance for Page Values is" , (var(df$pagevalues)), sep = " ")
+paste("The variance for Special day  is" , (var(df$specialday)), sep = " ")
+paste("The variance for Operating System  is" , (var(df$operatingsystems)), sep = " ")
+paste("The variance for Browser is" , (var(df$browser)), sep = " ")
+paste("The variance for Region  is" , (var(df$region)), sep = " ")
+paste("The variance for Traffic type is" , (var(df$traffictype)), sep = " ")
+```
+
+The standard deviation
+```{r}
+paste("The Standard Deviation for Administrative Duration is" , (sd(df$administrative_duration)), sep = " ")
+paste("The Standard Deviation for Informational Duration is" , (sd(df$informational_duration)), sep = " ")
+paste("The Standard Deviation for Product Related  is" , (sd(df$productrelated)), sep = " ")
+paste("The Standard Deviation for Product Related Duration is" , (sd(df$productrelated_duration  )), sep = " ")
+paste("The Standard Deviation for Bounce Rates  is" , (sd(df$bouncerates)), sep = " ")
+paste("The Standard Deviation for Exit rates is" , (sd(df$exitrates)), sep = " ")
+paste("The Standard Deviation for Page Values is" , (sd(df$pagevalues)), sep = " ")
+paste("The Standard Deviation for Special day  is" , (sd(df$specialday)), sep = " ")
+paste("The Standard Deviation for Operating System  is" , (sd(df$operatingsystems)), sep = " ")
+paste("The Standard Deviation for Browser is" , (sd(df$browser)), sep = " ")
+paste("The Standard Deviation for Region  is" , (sd(df$region)), sep = " ")
+paste("The Standard Deviation for Traffic type is" , (sd(df$traffictype)), sep = " ")
+```
+
+The Kurtosis
+
+```{r}
+paste("The kurtosis for Administrative Duration is" , (kurtosis(df$administrative_duration)), sep = " ")
+paste("The kurtosis for Informational Duration is" , (kurtosis(df$informational_duration)), sep = " ")
+paste("The kurtosis for Product Related  is" , (kurtosis(df$productrelated)), sep = " ")
+paste("The kurtosis for Product Related Duration is" , (kurtosis(df$productrelated_duration  )), sep = " ")
+paste("The kurtosis for Bounce Rates  is" , (kurtosis(df$bouncerates)), sep = " ")
+paste("The kurtosis for Exit rates is" , (kurtosis(df$exitrates)), sep = " ")
+paste("The kurtosis for Page Values is" , (kurtosis(df$pagevalues)), sep = " ")
+paste("The kurtosis for Special day  is" , (kurtosis(df$specialday)), sep = " ")
+paste("The kurtosis for Operating System  is" , (kurtosis(df$operatingsystems)), sep = " ")
+paste("The kurtosis for Browser is" , (kurtosis(df$browser)), sep = " ")
+paste("The kurtosis for Region  is" , (kurtosis(df$region)), sep = " ")
+paste("The kurtosis for Traffic type is" , (kurtosis(df$traffictype)), sep = " ")
+```
+this is to see the number of people that added revenue. 
+```{r}
+revenuetab <- table(df$revenue)
+plot(revenuetab, main = "Number of people that contributed to the Revenue")
+```
+
+
+Histograms of the different columns
+
+```{r}
+df %>%
+  gather(attributes, value, 1:10) %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(fill = 'lightblue2', color = 'black') +
+  facet_wrap(~attributes, scales = 'free_x') +
+  labs(x="Values", y="Frequency") +
+  theme_bw()
+```
+
+`
+```{r}
+hist(df$operatingsystems, main = 'Histogram of Operating systems column')
+```
+```{r}
+hist(df$browser, main = 'Histogram of Browser column')
+```
+```{r}
+hist(df$region, main = 'Histogram of Region column')
+```
+```{r}
+hist(df$traffictype, main = 'Histogram of Traffic type column')
+```
+#Bivariate Analysis
+## Numerical columns 
+```{r fig.height=8, fig.width=8}
+# The following is a pair plot of all the number variables 
+pairs(df[,1:10])
+```
+We should find the correlation of the data
+
+
+```{r fig.height=5, fig.width=5}
+# calculate correlations
+correlations <- cor(df[,1:10])
+# create correlation plot
+corrplot(correlations, method="number")
+```
+From the correlation plot that there are only few columns that are correlated. The correlations is usually from the duration columns. However, the bounce rate and exit rates are also correlated 
+
+## categorical columns 
+Lets look at the months which have a lot of customers. and the type of customers.
+```{r}
+# Visitor Type vs Month
+df %>%
+    ggplot(aes(month)) +
+    geom_bar(aes(fill = visitortype))+
+    labs(title = "Visitor Type by Month")
+```
+It can be observed that the months with the most number of customers are: May, November, March and December. This can be as a result of the various celebrations in these months. For instance, in march, most people are usually shopping foe Easter products. In November, the black Friday sales generate a lot of traffic for the site. They are also shopping for Thanksgiving, Christmas and Hanukkah. 
+It is also clear that the site gets a lot of returning visitors. 
+New visitors are usually found in the months that there is an increase in customer traffic. 
+
+
+
+#Unsupervised machine learning models
+
+Preparation of the data for K-means and Hierarchical modelling
+first its label encoding 
+
+```{r}
+#Create a copy of our dataframe
+df_copy <- data.frame(df)            # Create copy of data
+df_copy
+
+# Preprocessing the dataset
+# ---
+# Since clustering is a type of Unsupervised Learning, 
+# we would not require Class Label(output) during execution of our algorithm. 
+# We will, therefore, remove Class Attribute “revenue” and store it in another variable. 
+# We would then normalize the attributes between 0 and 1 using our own function.
+# ---
+#
+df.class<- df_copy[, "revenue"]
+df <- df[, c(1, 2, 3, 4,5,6,7,8,9,10,11,12,13,14,15,16,17)]
+head(df)
+```
+
+```{r}
+#Check for unique values in column
+uniq_rev <- unique(df_copy$revenue, )
+length(uniq_rev)
+```
+
+```{r}
+# Use label encoder to change logical and categorical variable to numerical for the model
+# Initialise the instance of the encoder
+lbl <- LabelEncoder$new()
+
+# Month
+lbl$fit(df$month)
+df$month <- lbl$fit_transform(df$month)
+
+#Visitortype
+lbl$fit(df$visitortype)
+df$visitortype <- lbl$fit_transform(df$visitortype)
+
+head(df)
+```
+
+Scaling the data frame. 
+```{r}
+dfscaled <- as.data.frame(scale(df))
+head(dfscaled)
+```
+
+Now we can normalize the data.
+```{r}
+df_norm <- as.data.frame(apply(dfscaled, 2, function(x) (x - min(x))/(max(x)-min(x))))
+```
+
+
+Determining the optimal number of clusters for the KMeans function
+```{r}
+fviz_nbclust(df_norm, kmeans, method = "wss") +
+   labs(subtitle = "Elbow method")
+```
+from the Scree plot of the elbow method we can see that 3 is the optimal number of clusters 
+
+```{r}
+km.out <- kmeans(df_norm, centers = 3, nstart = 20, iter.max = 50)
+```
+Lets make plots with the number a number of cluster sizes from 5:10 and lets figure out the one with the lowest Total within sum 
+
+```{r}
+# Viewing the cluster center datapoints by each attribute
+km.out$centers
+```
+```{r}
+# Looking at how many data points are in each cluster
+km.out$size
+```
+```{r}
+# Getting the cluster vector that shows the cluster where each record falls
+# ---
+# 
+km.out$cluster
+
+# The graph shows that we have got 3 clearly distinguishable clusters for Ozone and Solar.R data points.
+# Let’s see how clustering has performed on Wind and Temp attributes.
+```
+```{r}
+fviz_cluster(km.out, data = df)
+
+```
+
+
+# Challenging the solution. 
+# Haerachial clustering. 
+
+```{r}
+# Making the clustering model 
+# hclust.out <- hclust (dist(df_norm), method = "complete")
+# summary(hclust.out)
+
+
+d <- dist(df_norm, method = "euclidean")
+
+# We then hierarchical clustering using the Ward's method
+# ---
+# 
+set.seed(240)
+res.hc <- hclust(d, method = "ward.D2" )
+res.hc
+```
+
+```{r}
+# Lastly, we plot the obtained dendrogram
+# ---
+# 
+plot(res.hc, cex = 0.6, hang = -1)
+```
+```{r}
+> cutree(hc.complete , 2)
+
+```
+
+
+```{r}
+# Drawing the output of the Hierachial cluster
+plot (res.hc)
+```
+As we can see this is a very big mess. Therefore, the number of clusters can be used as a metric to cut down the tree. 
+```{r}
+# Drawing the cut off point on the tree
+plot (hclust.out)
+abline (h=1 , col = "red")
+```
+Now we have to cut the tree using the predetermined optimal cluster number
+```{r}
+# cut the tree
+cut.df <- cutree(hclust.out, k = 6)
+```
+
+```{r}
+# Compare methods
+table(km.out$cluster, cut.df)
+```
+```{r}
+library(cluster)
+clusplot(df_norm, km.out$cluster, color=TRUE, shade=TRUE, 
+    labels=2, lines=0)
+```
+# Follow up Questions
+Was the data provided enough to answer the question?
+Yes, the data was sufficient.
+
+What could be done to improve the quality of data?
+The data had many columns. However, applying dimension reduction techniques to the data would make it more understandable and easy to work with. 
