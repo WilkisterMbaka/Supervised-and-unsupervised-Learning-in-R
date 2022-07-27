@@ -348,11 +348,6 @@ There are 237 unique countries.
 ### Gender
 ggplot(advert, aes(x = factor(Male))) +
   geom_bar(fill="steelblue") +  ggtitle('Count of Gender')
-# male <- advert$Male
-# male_freq <- table(male)
-# barplot(male_freq, main= 'Gender Distribution', xlab="Gender",
-# ylab="Number of people",
-# col="steelblue")
 ```
 Slightly more females than male(0 is female)
 
@@ -367,7 +362,7 @@ ggplot(advert, aes(x = factor(`Clicked on Ad`))) +
 There are equal values of clicked and not clicked on ad
 
 
-**### Bivariate analysis** 
+### **Bivariate analysis**
 
 
 ```{r}
@@ -520,14 +515,51 @@ confusionMatrix(table(test_pred, testing$Clicked.on.Ad))
 ```
 The accuracy of this model is 97.67% which is good.
 
+# **Challenging the Solution**
+
+## **KNN**
+
+```{r}
+# Normalizing the numerical variables of the data set.
+df_norm <- as.data.frame(apply(advert_model[1:5], 2, function(x) (x - min(x))/(max(x)-min(x))))
+head(df_norm)
+```
+```{r}
+# Add the y variable back to the dataframe
+df_norm$Clicked.on.Ad = advert_model$Clicked.on.Ad
+head(df_norm)
+```
+
+```{r}
+# Next we split the data into training set and testing set. 
+intrain <- createDataPartition(y = df_norm$Clicked.on.Ad, p= 0.7, list = FALSE)
+training <- df_norm[intrain,]
+testing <- df_norm[-intrain,]
+```
+
+```{r}
+# Now we can use the K-NN algorithm. Lets call the "class" package which contains the K-NN algorithm.
+# We then have to provide 'k' value which is no of nearest neighbours(NN) to look for 
+# in order to classify the test data point.
+# Lets build a model on it; cl is the class of the training data set and k is the no of neighbours to look for 
+# in order to classify it accordingly.
+
+library(class)    
+require(class)
+model <- knn(train= training,test=testing, ,cl= training$`Clicked.on.Ad`,k=5)
+table(factor(model))
+table(testing$`Clicked.on.Ad`,model)
+```
+The KNN model has predicted all the values correctly.
+
 ## Conclusion
 
 Below are some of the conclusions we have:
 
 1.  Most of the individuals in the site are of the average age of 36.
-2.   Individuals between the age of 30 - 50 spend the most time on the
-    site.
+2.  Individuals between the age of 30 - 50 spend the most time on the site.
 3.  Individuals at the age of 31 are the most in the site.
+4.  KNN performed better with 100% accuracy while SVM had 96% Accuracy
 
 ## Recommendations
 
@@ -536,7 +568,7 @@ Our recommendations are:
 1.   More advertisement should cater to individuals in their 30s but
     extend to the age bracket (30-50).
 
-
+2. We would recommend to use KNN because it has better performance
 
 
 
