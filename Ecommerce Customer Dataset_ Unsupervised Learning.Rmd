@@ -495,6 +495,12 @@ Now we can normalize the data.
 df_norm <- as.data.frame(apply(df.model, 2, function(x) (x - min(x))/(max(x)-min(x))))
 ```
 
+Determining the optimal number of clusters for the KMeans function
+```{r}
+fviz_nbclust(df_norm, kmeans, method = "wss") +
+   labs(subtitle = "Elbow method")
+```
+From the plot above, it suggests that optimal number of clusters is 3 but from going through our dataset we know that it is 2.. so we will go with 2
 
 ```{r}
 km.out <- kmeans(df_norm, centers = 2, nstart = 20, iter.max = 50)
