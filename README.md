@@ -6,7 +6,7 @@ A Kenyan entrepreneur has created an online cryptography course and would want t
 
 **Research Question**
 * To identify which individuals are most likely to click on her ads.
-* To build a supervised machine learning model
+* To build a supervised machine learning model to help identify which individuals are most likely to click on the ads in the blog. 
 
 ## Part II - Unsupervised Learning
 ### **Description**
